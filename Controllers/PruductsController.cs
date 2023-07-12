@@ -2,6 +2,7 @@
 using API.Data;
 using API.DTO;
 using API.Errors;
+using API.Helpers;
 using API.Interfaces;
 using API.Interfaces.Implaments;
 using API.Specifications;
@@ -32,14 +33,22 @@ namespace API.Controllers
             _mapper = mapper;
         }
         [HttpGet] 
-        public async Task<ActionResult<List<ProductToReturnDto>>> GetProducts() 
+        public async Task<ActionResult<Pagination<ProductToReturnDto>>> GetProducts(
+            [FromQuery]ProductSpecParams Productparams) 
         {
-            var spec = new ProductsWithTypesAndBrandsSpecification();
+            var spec = new ProductsWithTypesAndBrandsSpecification(Productparams);
+
+            var countSpec = new ProductWithFiltersForCountSpecification(Productparams);
+
+            var totalItems = await _genericProduct.CountAsync(spec);
 
             var product =  await _genericProduct.ListAsync(spec);
 
-            return Ok(_mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductToReturnDto>>(product));
+            var data = _mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductToReturnDto>>(product);
+
+            return Ok(new Pagination<ProductToReturnDto>(Productparams.PageIndex, Productparams.PageSize, totalItems,data));
         }
+
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -50,11 +59,15 @@ namespace API.Controllers
             if (product == null) return NotFound(new ApiResponse (404));
             return _mapper.Map<Product ,ProductToReturnDto>(product);
         }
+
+
         [HttpGet("brands")]
         public async Task<ActionResult<IReadOnlyList<ProductBrand>>> GetProductBrands()
         {
             return Ok(await _genericBrand.ListAllAsync());
         }
+
+
         [HttpGet("types")]
         public async Task<ActionResult<IReadOnlyList<ProductType>>> GetProductTypes()
         {

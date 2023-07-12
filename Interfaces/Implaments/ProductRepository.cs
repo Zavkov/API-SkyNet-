@@ -29,6 +29,9 @@ namespace API.Interfaces.Implaments
         }
         public async Task<IReadOnlyList<Product>> GetProductsAsync()
         {
+            var products = _context.Products.ToList();
+
+
            return await _context.Products
                 .Include(p => p.ProductType)
                 .Include(p => p.ProductBrand)
